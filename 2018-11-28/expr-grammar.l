@@ -13,7 +13,11 @@ ID       [A-Za-z][A-Za-z0-9]*
 {DIGIT}+           { yylval.value = atoi(yytext); return VAL; }
 {ID}               { yylval.id = strdup(yytext); return ID; }
 [ \t\r]+           /* discard whitespace */
-[-*/+\n\(\)]       return *yytext;
+[-*/+><\n\(\)]     { return *yytext; }
+\>=                { return GE; }
+\<=                { return LE; }
+==                 { return EQ; }
+!=                 { return NE; }
 .                  yyerror("Unexpected character");
 
 %%
