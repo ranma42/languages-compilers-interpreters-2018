@@ -1,6 +1,7 @@
 %{
   #include <stdio.h>
   #include <stdlib.h>
+  #include "utils.h"
 
   int yylex(void);
   void yyerror(char *);
@@ -8,7 +9,7 @@
   struct expr;
   struct expr* bool_lit(int v);
   struct expr* literal(int v);
-  struct expr* variable(char *id);
+  struct expr* variable(size_t id);
   struct expr* binop(struct expr *lhs, int op, struct expr *rhs);
   void print_expr(struct expr *expr);
   void emit_stack_machine(struct expr *expr);
@@ -20,19 +21,22 @@
 
 %union {
   int value;
-  char *id;
+  size_t id;
   struct expr *expr;
   enum value_type {
-    ERROR,
-    INTEGER,
-    BOOLEAN,
+    ERROR = -1,
+    UNTYPED = 0,
+    INTEGER = 1,
+    BOOLEAN = 2,
   } type;
 }
 
-%token GE LE EQ NE TRUE FALSE
+%token GE LE EQ NE FALSE TRUE
+%token BOOL_TYPE INT_TYPE
 %token <id> ID
 %token <value> VAL
 %type  <expr>  expr
+%type  <type>  type
 
 %left GE LE EQ NE '>' '<'
 %left '+' '-'
@@ -40,7 +44,8 @@
 
 %%
 program:
-    program expr '\n' {
+    program decl '\n'   {}
+    | program expr '\n' {
         enum value_type t = check_types($2);
         if (t != ERROR) {
           print_expr($2); printf(": %s\n\n", type_name(t));
@@ -54,6 +59,19 @@ program:
       }
     |
     ;
+
+type: BOOL_TYPE   { $$ = BOOLEAN; }
+      | INT_TYPE  { $$ = INTEGER; }
+
+decl: type ID {
+                if (vector_get(&global_types, $2)) {
+                  printf("Multiple declarations for identifier %s\n", string_int_rev(&global_ids, $2));
+                  exit(0);
+                } else {
+                  void *p = (void *) $1;
+                  vector_set(&global_types, $2, p);
+                }
+              }
 
 expr: VAL             { $$ = literal($1); }
       | FALSE         { $$ = bool_lit(0); }
@@ -83,6 +101,10 @@ void yyerror(char* s){
 }
 
 int main(void){
+    vector_init(&global_types);
+    string_int_init(&global_ids);
     yyparse();
+    vector_fini(&global_types);
+    string_int_fini(&global_ids);
     return 0;
 }

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "expr-grammar.tab.h"
+#include "utils.h"
 
 const char *type_name(enum value_type t) {
   switch (t) {
@@ -23,7 +24,7 @@ struct expr {
   enum expr_type type;
   union {
     int value; // for type == LITERAL || type == BOOL_LIT
-    char *id; // for type == VARIABLE
+    size_t id; // for type == VARIABLE
     struct {
       struct expr *lhs;
       struct expr *rhs;
@@ -46,7 +47,7 @@ struct expr* literal(int v) {
   return r;
 }
 
-struct expr* variable(char *id) {
+struct expr* variable(size_t id) {
   struct expr* r = malloc(sizeof(struct expr));
   r->type = VARIABLE;
   r->id = id;
@@ -73,7 +74,7 @@ void print_expr(struct expr *expr) {
       break;
 
     case VARIABLE:
-      printf("%s", expr->id);
+      printf("%s", string_int_rev(&global_ids, expr->id));
       break;
 
     case BIN_OP:
@@ -103,7 +104,7 @@ void emit_stack_machine(struct expr *expr) {
       break;
 
     case VARIABLE:
-      printf("load_mem %s\n", expr->id);
+      printf("load_mem %zu # %s\n", expr->id, string_int_rev(&global_ids, expr->id));
       break;
 
     case BIN_OP:
@@ -145,7 +146,7 @@ int emit_reg_machine(struct expr *expr) {
       break;
 
     case VARIABLE:
-      printf("r%d = %s\n", result_reg, expr->id);
+      printf("r%d = load %zu # %s\n", result_reg, expr->id, string_int_rev(&global_ids, expr->id));
       break;
 
     case BIN_OP: {
@@ -180,8 +181,7 @@ enum value_type check_types(struct expr *expr) {
       return INTEGER;
 
     case VARIABLE:
-      printf("TODO\n");
-      return ERROR;
+      return (enum value_type) vector_get(&global_types, expr->id);
 
     case BIN_OP: {
       enum value_type lhs = check_types(expr->binop.lhs);
@@ -224,11 +224,7 @@ void free_expr(struct expr *expr) {
   switch (expr->type) {
     case BOOL_LIT:
     case LITERAL:
-      free(expr);
-      break;
-
     case VARIABLE:
-      free(expr->id);
       free(expr);
       break;
 
