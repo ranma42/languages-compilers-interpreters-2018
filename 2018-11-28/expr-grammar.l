@@ -10,6 +10,8 @@ ID       [A-Za-z][A-Za-z0-9]*
 %option noyywrap
 %%
 
+true               { return TRUE; }
+false              { return FALSE; }
 {DIGIT}+           { yylval.value = atoi(yytext); return VAL; }
 {ID}               { yylval.id = strdup(yytext); return ID; }
 [ \t\r]+           /* discard whitespace */

@@ -6,6 +6,7 @@
   void yyerror(char *);
 
   struct expr;
+  struct expr* bool_lit(int v);
   struct expr* literal(int v);
   struct expr* variable(char *id);
   struct expr* binop(struct expr *lhs, int op, struct expr *rhs);
@@ -28,7 +29,7 @@
   } type;
 }
 
-%token GE LE EQ NE
+%token GE LE EQ NE TRUE FALSE
 %token <id> ID
 %token <value> VAL
 %type  <expr>  expr
@@ -55,6 +56,8 @@ program:
     ;
 
 expr: VAL             { $$ = literal($1); }
+      | FALSE         { $$ = bool_lit(0); }
+      | TRUE          { $$ = bool_lit(1); }
       | ID            { $$ = variable($1); }
       | '(' expr ')'  { $$ = $2; }
 

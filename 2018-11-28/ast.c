@@ -13,6 +13,7 @@ const char *type_name(enum value_type t) {
 }
 
 enum expr_type {
+  BOOL_LIT,
   LITERAL,
   VARIABLE,
   BIN_OP,
@@ -21,7 +22,7 @@ enum expr_type {
 struct expr {
   enum expr_type type;
   union {
-    int value; // for type == LITERAL
+    int value; // for type == LITERAL || type == BOOL_LIT
     char *id; // for type == VARIABLE
     struct {
       struct expr *lhs;
@@ -30,6 +31,13 @@ struct expr {
     } binop; // for type == BIN_OP
   };
 };
+
+struct expr* bool_lit(int v) {
+  struct expr* r = malloc(sizeof(struct expr));
+  r->type = BOOL_LIT;
+  r->value = v;
+  return r;
+}
 
 struct expr* literal(int v) {
   struct expr* r = malloc(sizeof(struct expr));
@@ -56,6 +64,10 @@ struct expr* binop(struct expr *lhs, int op, struct expr *rhs) {
 
 void print_expr(struct expr *expr) {
   switch (expr->type) {
+    case BOOL_LIT:
+      printf("%s", expr->value ? "true" : "false");
+      break;
+
     case LITERAL:
       printf("%d", expr->value);
       break;
@@ -82,6 +94,10 @@ void print_expr(struct expr *expr) {
 
 void emit_stack_machine(struct expr *expr) {
   switch (expr->type) {
+    case BOOL_LIT:
+      printf(expr->value ? "load_true\n" : "load_false\n");
+      break;
+
     case LITERAL:
       printf("load_imm %d\n", expr->value);
       break;
@@ -120,6 +136,10 @@ int gen_reg() {
 int emit_reg_machine(struct expr *expr) {
   int result_reg = gen_reg();
   switch (expr->type) {
+    case BOOL_LIT:
+      printf("r%d = %d\n", result_reg, expr->value);
+      break;
+
     case LITERAL:
       printf("r%d = %d\n", result_reg, expr->value);
       break;
@@ -153,6 +173,9 @@ int emit_reg_machine(struct expr *expr) {
 
 enum value_type check_types(struct expr *expr) {
   switch (expr->type) {
+    case BOOL_LIT:
+      return BOOLEAN;
+
     case LITERAL:
       return INTEGER;
 
@@ -199,6 +222,7 @@ enum value_type check_types(struct expr *expr) {
 
 void free_expr(struct expr *expr) {
   switch (expr->type) {
+    case BOOL_LIT:
     case LITERAL:
       free(expr);
       break;
