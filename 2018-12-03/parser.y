@@ -5,7 +5,7 @@
   #include "utils.h"
 
   int yylex(void);
-  void yyerror(char *);
+  void yyerror(const char *);
 %}
 
 %union {
@@ -90,7 +90,7 @@ expr: VAL             { $$ = literal($1); }
 
 %%
 
-void yyerror(char* s){
+void yyerror(const char* s){
     fprintf(stderr, "%s\n", s);
 }
 

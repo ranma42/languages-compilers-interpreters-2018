@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "expr-grammar.tab.h"
+#include "y.tab.h"
 
 const char *type_name(enum value_type t);
 

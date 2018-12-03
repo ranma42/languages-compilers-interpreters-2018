@@ -1,5 +1,5 @@
 %{
-  #include "expr-grammar.tab.h"
+  #include "y.tab.h"
   #include <stdlib.h>
   #include "utils.h"
 

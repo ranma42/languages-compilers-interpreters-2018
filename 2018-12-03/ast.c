@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "ast.h"
-#include "expr-grammar.tab.h"
+#include "y.tab.h"
 #include "utils.h"
 
 const char *type_name(enum value_type t) {
