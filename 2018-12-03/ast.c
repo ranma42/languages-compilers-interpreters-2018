@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "ast.h"
 #include "expr-grammar.tab.h"
 #include "utils.h"
 
@@ -12,26 +13,6 @@ const char *type_name(enum value_type t) {
     default: return "not-a-type";
   }
 }
-
-enum expr_type {
-  BOOL_LIT,
-  LITERAL,
-  VARIABLE,
-  BIN_OP,
-};
-
-struct expr {
-  enum expr_type type;
-  union {
-    int value; // for type == LITERAL || type == BOOL_LIT
-    size_t id; // for type == VARIABLE
-    struct {
-      struct expr *lhs;
-      struct expr *rhs;
-      int op;
-    } binop; // for type == BIN_OP
-  };
-};
 
 struct expr* bool_lit(int v) {
   struct expr* r = malloc(sizeof(struct expr));
@@ -130,7 +111,7 @@ void emit_stack_machine(struct expr *expr) {
 
 static int next_reg = 0;
 
-int gen_reg() {
+static int gen_reg() {
   return next_reg++;
 }
 

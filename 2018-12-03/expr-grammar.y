@@ -1,22 +1,11 @@
 %{
   #include <stdio.h>
   #include <stdlib.h>
+  #include "ast.h"
   #include "utils.h"
 
   int yylex(void);
   void yyerror(char *);
-
-  struct expr;
-  struct expr* bool_lit(int v);
-  struct expr* literal(int v);
-  struct expr* variable(size_t id);
-  struct expr* binop(struct expr *lhs, int op, struct expr *rhs);
-  void print_expr(struct expr *expr);
-  void emit_stack_machine(struct expr *expr);
-  int emit_reg_machine(struct expr *expr);
-  void free_expr(struct expr *expr);
-  enum value_type check_types(struct expr *expr);
-  const char *type_name(enum value_type t);
 %}
 
 %union {
@@ -31,7 +20,8 @@
   } type;
 }
 
-%token GE LE EQ NE FALSE TRUE
+%token GE LE EQ NE
+%token FALSE TRUE
 %token BOOL_TYPE INT_TYPE
 %token <id> ID
 %token <value> VAL
