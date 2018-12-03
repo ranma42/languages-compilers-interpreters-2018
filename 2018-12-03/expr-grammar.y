@@ -18,50 +18,54 @@
     INTEGER = 1,
     BOOLEAN = 2,
   } type;
+  struct stmt *stmt;
 }
 
 %token GE LE EQ NE
 %token FALSE TRUE
+%token IF ELSE WHILE PRINT
 %token BOOL_TYPE INT_TYPE
 %token <id> ID
 %token <value> VAL
 %type  <expr>  expr
+%type  <stmt>  stmt
+%type  <stmt>  stmts
 %type  <type>  type
 
+%nonassoc IF_ALONE
+%nonassoc ELSE
 %left GE LE EQ NE '>' '<'
 %left '+' '-'
 %left '*' '/'
 
 %%
-program:
-    program decl '\n'   {}
-    | program expr '\n' {
-        enum value_type t = check_types($2);
-        if (t != ERROR) {
-          print_expr($2); printf(": %s\n\n", type_name(t));
-          emit_stack_machine($2); printf("\n");
-          printf("ret r%d\n\n", emit_reg_machine($2));
-        } else {
-          yyerror("The expression does not have a valid type\n");
-          exit(0);
-        }
-        free_expr($2);
-      }
-    |
-    ;
+program: decls stmt {
+                      free_stmt($2);
+                    }
 
 type: BOOL_TYPE   { $$ = BOOLEAN; }
       | INT_TYPE  { $$ = INTEGER; }
 
-decl: type ID {
-                if (vector_get(&global_types, $2)) {
-                  printf("Multiple declarations for identifier %s\n", string_int_rev(&global_ids, $2));
-                  exit(0);
-                } else {
-                  void *p = (void *) $1;
-                  vector_set(&global_types, $2, p);
-                }
-              }
+decls: decls decl | ;
+decl: type ID ';'     {
+                        if (vector_get(&global_types, $2)) {
+                          printf("Multiple declarations for identifier %s\n", string_int_rev(&global_ids, $2));
+                          exit(0);
+                        } else {
+                          void *p = (void *) $1;
+                          vector_set(&global_types, $2, p);
+                        }
+                      }
+
+stmts: stmts stmt     { $$ = make_seq($1, $2); }
+      | stmt          { $$ = $1; };
+
+stmt: '{' stmts '}'                         { $$ = $2; }
+      | ID '=' expr ';'                     { $$ = make_assign($1, $3); }
+      | IF '(' expr ')' stmt %prec IF_ALONE { $$ = make_if($3, $5); }
+      | IF '(' expr ')' stmt ELSE stmt      { $$ = make_ifelse($3, $5, $7); }
+      | WHILE '(' expr ')' stmt             { $$ = make_while($3, $5); }
+      | PRINT expr ';'                      { $$ = make_print($2); }
 
 expr: VAL             { $$ = literal($1); }
       | FALSE         { $$ = bool_lit(0); }

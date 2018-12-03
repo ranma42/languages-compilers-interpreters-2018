@@ -216,3 +216,77 @@ void free_expr(struct expr *expr) {
       break;
   }
 }
+
+struct stmt* make_seq(struct stmt *fst, struct stmt *snd) {
+  struct stmt* r = malloc(sizeof(struct stmt));
+  r->type = STMT_SEQ;
+  r->seq.fst = fst;
+  return r;
+}
+
+struct stmt* make_assign(size_t id, struct expr *e) {
+  struct stmt* r = malloc(sizeof(struct stmt));
+  r->type = STMT_ASSIGN;
+  r->assign.id = id;
+  r->assign.expr = e;
+  return r;
+}
+
+struct stmt* make_while(struct expr *e, struct stmt *body) {
+  struct stmt* r = malloc(sizeof(struct stmt));
+  r->type = STMT_WHILE;
+  r->while_.cond = e;
+  r->while_.body = body;
+  return r;
+}
+
+struct stmt* make_ifelse(struct expr *e, struct stmt *if_body, struct stmt *else_body) {
+  struct stmt* r = malloc(sizeof(struct stmt));
+  r->type = STMT_IF;
+  r->ifelse.cond = e;
+  r->ifelse.if_body = if_body;
+  r->ifelse.else_body = else_body;
+  return r;
+}
+
+struct stmt* make_if(struct expr *e, struct stmt *body) {
+  return make_ifelse(e, body, NULL);
+}
+
+struct stmt* make_print(struct expr *e) {
+  struct stmt* r = malloc(sizeof(struct stmt));
+  r->type = STMT_PRINT;
+  r->print.expr = e;
+  return r;
+}
+
+void free_stmt(struct stmt *stmt) {
+  switch (stmt->type) {
+    case STMT_SEQ:
+      free_stmt(stmt->seq.fst);
+      free_stmt(stmt->seq.snd);
+      break;
+
+    case STMT_ASSIGN:
+      free_expr(stmt->assign.expr);
+      break;
+
+    case STMT_PRINT:
+      free_expr(stmt->print.expr);
+      break;
+
+    case STMT_WHILE:
+      free_expr(stmt->while_.cond);
+      free_stmt(stmt->while_.body);
+      break;
+
+    case STMT_IF:
+      free_expr(stmt->ifelse.cond);
+      free_stmt(stmt->ifelse.if_body);
+      if (stmt->ifelse.else_body)
+        free_stmt(stmt->ifelse.else_body);
+      break;
+  }
+
+  free(stmt);
+}
