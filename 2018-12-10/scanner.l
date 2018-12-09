@@ -2,8 +2,9 @@
   #include "y.tab.h"
   #include <stdlib.h>
   #include "utils.h"
+  #include <llvm-c/Core.h>
 
-  void yyerror(char *);
+  void yyerror(LLVMModuleRef module, LLVMBuilderRef builder, const char* s);
 %}
 
 DIGIT    [0-9]
@@ -28,6 +29,6 @@ false              { return FALSE; }
 \<=                { return LE; }
 ==                 { return EQ; }
 !=                 { return NE; }
-.                  yyerror("Unexpected character");
+.                  yyerror(NULL, NULL, "Unexpected character");
 
 %%

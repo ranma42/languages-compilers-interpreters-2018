@@ -1,12 +1,22 @@
 %{
   #include <stdio.h>
   #include <stdlib.h>
+
+  #include <llvm-c/Analysis.h>
+  #include <llvm-c/Core.h>
+  #include <llvm-c/ExecutionEngine.h>
+  #include <llvm-c/Transforms/Scalar.h>
+  #include <llvm-c/Transforms/Utils.h>
+
   #include "ast.h"
   #include "utils.h"
 
   int yylex(void);
-  void yyerror(const char *);
+  void yyerror(LLVMModuleRef module, LLVMBuilderRef builder, const char* s);
 %}
+
+%parse-param {LLVMModuleRef module}
+%parse-param {LLVMBuilderRef builder}
 
 %union {
   int value;
@@ -40,12 +50,10 @@
 
 %%
 program: decls stmt {
-                      if (!valid_stmt($2)) {
-                        printf("The program is not valid\n\n");
-                      }
-                      printf("{\n");
-                      print_stmt($2, 1);
-                      printf("}\n");
+                      codegen_stmt($2, module, builder);
+                      // printf("{\n");
+                      // print_stmt($2, 1);
+                      // printf("}\n");
                       free_stmt($2);
                     }
 
@@ -58,7 +66,8 @@ decl: type ID ';'     {
                           printf("Multiple declarations for identifier %s\n", string_int_rev(&global_ids, $2));
                           exit(0);
                         } else {
-                          void *p = (void *) $1;
+                          LLVMTypeRef t = $1 == BOOLEAN ? LLVMInt1Type() : LLVMInt32Type();
+                          LLVMValueRef p = LLVMBuildAlloca(builder, t, string_int_rev(&global_ids, $2));
                           vector_set(&global_types, $2, p);
                         }
                       }
@@ -96,15 +105,46 @@ expr: VAL             { $$ = literal($1); }
 
 %%
 
-void yyerror(const char* s){
+void yyerror(LLVMModuleRef module, LLVMBuilderRef builder, const char* s) {
     fprintf(stderr, "%s\n", s);
 }
 
-int main(void){
+int main(void)
+{
+    LLVMModuleRef module = LLVMModuleCreateWithName("exe");
+    LLVMBuilderRef builder = LLVMCreateBuilder();
+
     vector_init(&global_types);
     string_int_init(&global_ids);
-    yyparse();
+
+    // print_i32
+    LLVMTypeRef print_i32_args[] = { LLVMInt32Type() };
+    LLVMAddFunction(module, "print_i32",
+    LLVMFunctionType(LLVMVoidType(), print_i32_args, 1, 0));
+
+    // print_i1
+    LLVMTypeRef print_i1_args[] = { LLVMInt1Type() };
+    LLVMAddFunction(module, "print_i1",
+    LLVMFunctionType(LLVMVoidType(), print_i1_args, 1, 0));
+
+    // create "main" function
+    LLVMTypeRef main_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, 0);
+    LLVMValueRef main = LLVMAddFunction(module, "main", main_type);
+    LLVMBasicBlockRef main_bb = LLVMAppendBasicBlock(main, "entry");
+    LLVMPositionBuilderAtEnd(builder, main_bb);
+
+    yyparse(module, builder);
+
+    LLVMBuildRet(builder, 0);
+
+    // Dump entire module.
+    LLVMDumpModule(module);
+
     vector_fini(&global_types);
     string_int_fini(&global_ids);
+
+    LLVMDisposeBuilder(builder);
+    LLVMDisposeModule(module);
+
     return 0;
 }

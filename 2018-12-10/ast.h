@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <llvm-c/Core.h>
 
 #include "y.tab.h"
 
@@ -78,3 +79,6 @@ struct stmt* make_print(struct expr *e);
 void free_stmt(struct stmt *stmt);
 void print_stmt(struct stmt *stmt, int indent);
 int valid_stmt(struct stmt *stmt);
+
+LLVMValueRef codegen_expr(struct expr *expr, LLVMModuleRef module, LLVMBuilderRef builder);
+void codegen_stmt(struct stmt *stmt, LLVMModuleRef module, LLVMBuilderRef builder);

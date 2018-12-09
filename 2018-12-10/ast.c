@@ -215,8 +215,11 @@ enum value_type check_types(struct expr *expr) {
     case LITERAL:
       return INTEGER;
 
-    case VARIABLE:
-      return (enum value_type) vector_get(&global_types, expr->id);
+    case VARIABLE: {
+      LLVMValueRef ptr = vector_get(&global_types, expr->id);
+      LLVMTypeRef t = LLVMGetElementType(LLVMTypeOf(ptr));
+      return LLVMGetIntTypeWidth(t) == 1 ? BOOLEAN : INTEGER;
+    }
 
     case BIN_OP: {
       enum value_type lhs = check_types(expr->binop.lhs);
@@ -367,5 +370,87 @@ int valid_stmt(struct stmt *stmt) {
         check_types(stmt->ifelse.cond) == BOOLEAN &&
         valid_stmt(stmt->ifelse.if_body) &&
         (stmt->ifelse.else_body == NULL || valid_stmt(stmt->ifelse.else_body));
+  }
+}
+
+LLVMValueRef codegen_expr(struct expr *expr, LLVMModuleRef module, LLVMBuilderRef builder) {
+  switch (expr->type) {
+    case BOOL_LIT:
+      return LLVMConstInt(LLVMInt1Type(), expr->value, 0);
+
+    case LITERAL:
+      return LLVMConstInt(LLVMInt32Type(), expr->value, 0);
+
+    case VARIABLE:
+      return LLVMBuildLoad(builder, vector_get(&global_types, expr->id), "loadtmp");
+
+    case BIN_OP: {
+      LLVMValueRef lhs = codegen_expr(expr->binop.lhs, module, builder);
+      LLVMValueRef rhs = codegen_expr(expr->binop.rhs, module, builder);
+      switch (expr->binop.op) {
+        case '+': return LLVMBuildAdd(builder, lhs, rhs, "addtmp");
+        case '-': return LLVMBuildSub(builder, lhs, rhs, "subtmp");
+        case '*': return LLVMBuildMul(builder, lhs, rhs, "multmp");
+        case '/': return LLVMBuildSDiv(builder, lhs, rhs, "divtmp");
+
+        case EQ: return LLVMBuildICmp(builder, LLVMIntEQ, lhs, rhs, "eqtmp");
+        case NE: return LLVMBuildICmp(builder, LLVMIntNE, lhs, rhs, "netmp");
+
+        case GE: return LLVMBuildICmp(builder, LLVMIntSGE, lhs, rhs, "getmp");
+        case LE: return LLVMBuildICmp(builder, LLVMIntSLE, lhs, rhs, "letmp");
+        case '>': return LLVMBuildICmp(builder, LLVMIntSGT, lhs, rhs, "gttmp");
+        case '<': return LLVMBuildICmp(builder, LLVMIntSLT, lhs, rhs, "lttmp");
+      }
+    }
+  }
+  return NULL;
+}
+
+void codegen_stmt(struct stmt *stmt, LLVMModuleRef module, LLVMBuilderRef builder) {
+  switch (stmt->type) {
+    case STMT_SEQ: {
+      codegen_stmt(stmt->seq.fst, module, builder);
+      codegen_stmt(stmt->seq.snd, module, builder);
+      break;
+    }
+
+    case STMT_ASSIGN: {
+      LLVMValueRef expr = codegen_expr(stmt->assign.expr, module, builder);
+      LLVMBuildStore(builder, expr, vector_get(&global_types, stmt->assign.id));
+      break;
+    }
+
+    case STMT_PRINT: {
+      enum value_type arg_type = check_types(stmt->print.expr);
+      LLVMValueRef print_fn = LLVMGetNamedFunction(module, arg_type == BOOLEAN ? "print_i1" : "print_i32");
+      LLVMValueRef args[] = { codegen_expr(stmt->print.expr, module, builder) };
+      LLVMBuildCall(builder, print_fn, args, 1, "");
+      break;
+    }
+
+    case STMT_WHILE: {
+      LLVMValueRef func = LLVMGetBasicBlockParent(LLVMGetInsertBlock(builder));
+      LLVMBasicBlockRef cond_bb = LLVMAppendBasicBlock(func, "cond");
+      LLVMBasicBlockRef body_bb = LLVMAppendBasicBlock(func, "body");
+      LLVMBasicBlockRef cont_bb = LLVMAppendBasicBlock(func, "cont");
+
+      LLVMBuildBr(builder, cond_bb);
+
+      LLVMPositionBuilderAtEnd(builder, cond_bb);
+      LLVMValueRef cond = codegen_expr(stmt->while_.cond, module, builder);
+      LLVMBuildCondBr(builder, cond, body_bb, cont_bb);
+
+      LLVMPositionBuilderAtEnd(builder, body_bb);
+      codegen_stmt(stmt->while_.body, module, builder);
+      LLVMBuildBr(builder, cond_bb);
+
+      LLVMPositionBuilderAtEnd(builder, cont_bb);
+      break;
+    }
+
+    case STMT_IF: {
+      // IMPLEMENT ME :)
+      break;
+    }
   }
 }
