@@ -221,6 +221,7 @@ struct stmt* make_seq(struct stmt *fst, struct stmt *snd) {
   struct stmt* r = malloc(sizeof(struct stmt));
   r->type = STMT_SEQ;
   r->seq.fst = fst;
+  r->seq.snd = snd;
   return r;
 }
 
