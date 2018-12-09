@@ -76,3 +76,5 @@ struct stmt* make_ifelse(struct expr *e, struct stmt *if_body, struct stmt *else
 struct stmt* make_if(struct expr *e, struct stmt *body);
 struct stmt* make_print(struct expr *e);
 void free_stmt(struct stmt *stmt);
+void print_stmt(struct stmt *stmt, int indent);
+int valid_stmt(struct stmt *stmt);

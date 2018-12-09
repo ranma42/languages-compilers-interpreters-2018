@@ -40,6 +40,12 @@
 
 %%
 program: decls stmt {
+                      if (!valid_stmt($2)) {
+                        printf("The program is not valid\n\n");
+                      }
+                      printf("{\n");
+                      print_stmt($2, 1);
+                      printf("}\n");
                       free_stmt($2);
                     }
 

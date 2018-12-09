@@ -74,6 +74,60 @@ void print_expr(struct expr *expr) {
   }
 }
 
+static void print_indent(int indent) {
+  while (indent--) {
+    printf("  ");
+  }
+}
+
+void print_stmt(struct stmt *stmt, int indent) {
+  switch (stmt->type) {
+    case STMT_SEQ:
+      print_stmt(stmt->seq.fst, indent);
+      print_stmt(stmt->seq.snd, indent);
+      break;
+
+    case STMT_ASSIGN:
+      print_indent(indent);
+      printf("%s = ", string_int_rev(&global_ids, stmt->assign.id));
+      print_expr(stmt->assign.expr);
+      printf(";\n");
+      break;
+
+    case STMT_PRINT:
+      print_indent(indent);
+      printf("print ");
+      print_expr(stmt->print.expr);
+      printf(";\n");
+      break;
+
+    case STMT_WHILE:
+      print_indent(indent);
+      printf("while (");
+      print_expr(stmt->while_.cond);
+      printf(") {\n");
+      print_stmt(stmt->while_.body, indent + 1);
+      print_indent(indent);
+      printf("}\n");
+      break;
+
+    case STMT_IF:
+      print_indent(indent);
+      printf("if (");
+      print_expr(stmt->ifelse.cond);
+      printf(") {\n");
+      print_stmt(stmt->ifelse.if_body, indent + 1);
+      if (stmt->ifelse.else_body) {
+        print_indent(indent);
+        printf("} else {\n");
+        print_stmt(stmt->ifelse.else_body, indent + 1);
+      }
+      print_indent(indent);
+      printf("}\n");
+      break;
+  }
+}
+
 void emit_stack_machine(struct expr *expr) {
   switch (expr->type) {
     case BOOL_LIT:
@@ -290,4 +344,28 @@ void free_stmt(struct stmt *stmt) {
   }
 
   free(stmt);
+}
+
+int valid_stmt(struct stmt *stmt) {
+  switch (stmt->type) {
+    case STMT_SEQ:
+      return valid_stmt(stmt->seq.fst) && valid_stmt(stmt->seq.snd);
+
+    case STMT_ASSIGN:
+      // should the language/compiler forbid accessing uninitialized variables?
+      // maybe also warn about dead assignments?
+      return check_types(stmt->assign.expr) != ERROR;
+
+    case STMT_PRINT:
+      return check_types(stmt->print.expr) != ERROR;
+
+    case STMT_WHILE:
+      return check_types(stmt->while_.cond) == BOOLEAN && valid_stmt(stmt->while_.body);
+
+    case STMT_IF:
+      return
+        check_types(stmt->ifelse.cond) == BOOLEAN &&
+        valid_stmt(stmt->ifelse.if_body) &&
+        (stmt->ifelse.else_body == NULL || valid_stmt(stmt->ifelse.else_body));
+  }
 }
