@@ -1,0 +1,18 @@
+int curr;
+int prev;
+int tmp;
+int idx;
+
+{
+  prev = 0;
+  curr = 1;
+  idx = 0;
+
+  while (idx < 10) {
+    tmp = prev + curr;
+    prev = curr;
+    curr = tmp;
+    print curr;
+    idx = idx + 1;
+  }
+}
