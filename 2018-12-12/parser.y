@@ -5,6 +5,7 @@
   #include <llvm-c/Analysis.h>
   #include <llvm-c/Core.h>
   #include <llvm-c/ExecutionEngine.h>
+  #include <llvm-c/IRReader.h>
   #include <llvm-c/Transforms/Scalar.h>
   #include <llvm-c/Transforms/Utils.h>
 
@@ -119,8 +120,30 @@ int main(void)
     LLVMModuleRef module = LLVMModuleCreateWithName("exe");
     LLVMBuilderRef builder = LLVMCreateBuilder();
 
+    LLVMModuleRef runtime;
+    char *error;
+    LLVMMemoryBufferRef buffer;
+    LLVMExecutionEngineRef engine;
+
     vector_init(&global_types);
     string_int_init(&global_ids);
+
+    LLVMInitializeNativeTarget();
+    LLVMInitializeNativeAsmPrinter();
+    LLVMInitializeNativeAsmParser();
+    LLVMLinkInMCJIT();
+
+    // Create execution engine.
+    if (LLVMCreateExecutionEngineForModule(&engine, module, &error)) {
+      fprintf(stderr, "%s\n", error);
+      return 1;
+    } else if (LLVMCreateMemoryBufferWithContentsOfFile("runtime.bc", &buffer, &error)) {
+      fprintf(stderr, "%s\n", error);
+      return 1;
+    } else if (LLVMParseIRInContext(LLVMGetGlobalContext(), buffer, &runtime, &error)) {
+      fprintf(stderr, "%s\n", error);
+      return 1;
+    }
 
     // print_i32
     LLVMTypeRef print_i32_args[] = { LLVMInt32Type() };
@@ -146,6 +169,12 @@ int main(void)
     LLVMDumpModule(module);
 
     LLVMVerifyModule(module, LLVMAbortProcessAction, &error);
+
+    fprintf(stderr, "Generating code\n");
+    void (*main_fn)() = (void (*)()) LLVMGetPointerToGlobal(engine, main);
+    fprintf(stderr, "Running\n");
+    main_fn();
+    fprintf(stderr, "Done\n");
 
     vector_fini(&global_types);
     string_int_fini(&global_ids);

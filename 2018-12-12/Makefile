@@ -14,13 +14,16 @@ LEX?=flex
 YACC?=bison
 YFLAGS?=-dv
 
-LLVM_LINK_FLAGS=`llvm-config --libs --cflags --ldflags core analysis executionengine mcjit interpreter native --system-libs`
+LLVM_LINK_FLAGS=`llvm-config --libs --cflags --ldflags core analysis irreader executionengine mcjit interpreter native --system-libs`
 
 # ensure that the parser (header) is generated before other code is compiled
-all: parser.c compiler
+all: parser.c runtime.bc compiler
 
 compiler: ${OBJECTS}
 	$(CXX) $(LLVM_LINK_FLAGS) $(CXXFLAGS) -o $@ $^
 
+runtime.bc: runtime.c
+	clang -c -emit-llvm $^
+
 clean: 
-	rm -rf lci ${OBJECTS} ${LEX_OBJECTS} ${YACC_OBJECTS}
+	rm -rf compiler runtime.bc ${OBJECTS} ${LEX_OBJECTS} ${YACC_OBJECTS}
