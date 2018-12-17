@@ -449,7 +449,25 @@ void codegen_stmt(struct stmt *stmt, LLVMModuleRef module, LLVMBuilderRef builde
     }
 
     case STMT_IF: {
-      // IMPLEMENT ME :)
+      LLVMValueRef func = LLVMGetBasicBlockParent(LLVMGetInsertBlock(builder));
+      LLVMBasicBlockRef body_bb = LLVMAppendBasicBlock(func, "body");
+      LLVMBasicBlockRef else_bb = LLVMAppendBasicBlock(func, "else");
+      LLVMBasicBlockRef cont_bb = LLVMAppendBasicBlock(func, "cont");
+
+      LLVMValueRef cond = codegen_expr(stmt->ifelse.cond, module, builder);
+      LLVMBuildCondBr(builder, cond, body_bb, else_bb);
+
+      LLVMPositionBuilderAtEnd(builder, body_bb);
+      codegen_stmt(stmt->ifelse.if_body, module, builder);
+      LLVMBuildBr(builder, cont_bb);
+
+      LLVMPositionBuilderAtEnd(builder, else_bb);
+      if (stmt->ifelse.else_body) {
+        codegen_stmt(stmt->ifelse.else_body, module, builder);
+      }
+      LLVMBuildBr(builder, cont_bb);
+
+      LLVMPositionBuilderAtEnd(builder, cont_bb);
       break;
     }
   }
