@@ -65,7 +65,7 @@ void string_int_init(struct string_int *v) {
   vector_init(&v->rev);
   v->count = 0;
   v->capacity = 16;
-  v->data = malloc(v->capacity * sizeof(v->data[0]));
+  v->data = calloc(v->capacity, sizeof(v->data[0]));
 }
 
 void string_int_fini(struct string_int *v) {
