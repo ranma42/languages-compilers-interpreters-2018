@@ -145,6 +145,11 @@ int main(void)
       return 1;
     }
 
+    // Setup optimizations.
+    LLVMPassManagerRef pass_manager = LLVMCreateFunctionPassManagerForModule(module);
+    LLVMAddPromoteMemoryToRegisterPass(pass_manager);
+    LLVMInitializeFunctionPassManager(pass_manager);
+
     // print_i32
     LLVMTypeRef print_i32_args[] = { LLVMInt32Type() };
     LLVMAddFunction(module, "print_i32",
@@ -169,6 +174,11 @@ int main(void)
     LLVMDumpModule(module);
 
     LLVMVerifyModule(module, LLVMAbortProcessAction, &error);
+
+    LLVMRunFunctionPassManager(pass_manager, main);
+
+    // Dump entire module.
+    LLVMDumpModule(module);
 
     fprintf(stderr, "Generating code\n");
     void (*main_fn)() = (void (*)()) LLVMGetPointerToGlobal(engine, main);
