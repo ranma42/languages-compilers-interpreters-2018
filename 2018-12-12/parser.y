@@ -50,7 +50,12 @@
 
 %%
 program: decls stmt {
-                      codegen_stmt($2, module, builder);
+                      if (valid_stmt($2)) {
+                        codegen_stmt($2, module, builder);
+                      } else {
+                        fprintf(stderr, "INVALID PROGRAM\n");
+                        exit(1);
+                      }
                       // printf("{\n");
                       // print_stmt($2, 1);
                       // printf("}\n");
@@ -139,6 +144,8 @@ int main(void)
 
     // Dump entire module.
     LLVMDumpModule(module);
+
+    LLVMVerifyModule(module, LLVMAbortProcessAction, &error);
 
     vector_fini(&global_types);
     string_int_fini(&global_ids);
