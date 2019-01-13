@@ -7,7 +7,9 @@
   #include <llvm-c/ExecutionEngine.h>
   #include <llvm-c/IRReader.h>
   #include <llvm-c/Transforms/Scalar.h>
+  #if LLVM_VERSION_MAJOR >= 7
   #include <llvm-c/Transforms/Utils.h>
+  #endif
 
   #include "ast.h"
   #include "utils.h"
@@ -16,8 +18,8 @@
   void yyerror(LLVMModuleRef module, LLVMBuilderRef builder, const char* s);
 %}
 
-%parse-param {LLVMModuleRef module}
-%parse-param {LLVMBuilderRef builder}
+%parse-param {void *module}
+%parse-param {void *builder}
 
 %union {
   int value;

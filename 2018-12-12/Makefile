@@ -20,7 +20,7 @@ LLVM_LINK_FLAGS=`llvm-config --libs --cflags --ldflags core analysis irreader ex
 all: parser.c runtime.bc compiler
 
 compiler: ${OBJECTS}
-	$(CXX) $(LLVM_LINK_FLAGS) $(CXXFLAGS) -o $@ $^
+	$(CXX) -o $@ $^ $(LLVM_LINK_FLAGS) $(CXXFLAGS) -rdynamic
 
 runtime.bc: runtime.c
 	clang -c -emit-llvm $^
